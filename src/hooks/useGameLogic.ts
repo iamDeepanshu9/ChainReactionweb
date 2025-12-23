@@ -54,8 +54,8 @@ export const useGameLogic = (): UseGameLogicReturn => {
                 // Assuming cell size is approx 50px (from CSS) + gaps/padding
                 // This is a rough estimation. 
                 // Header is ~80px, padding ~40px.
-                const availableWidth = window.innerWidth - 40;
-                const availableHeight = window.innerHeight - 120; // Header + padding
+                const availableWidth = window.innerWidth - 140;
+                const availableHeight = window.innerHeight - 220; // Header + padding
 
                 const CELL_SIZE = 55; // 50px + gap estimate
 
