@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { GridSize } from '../types';
 import type { Grid, Player, PlayerId, GameState } from '../types';
 import {
     createGrid,
@@ -10,12 +11,13 @@ import {
     DEFAULT_ROWS,
     DEFAULT_COLS,
     PLAYER_COLORS,
-    EXPLOSION_DELAY_MS
+    EXPLOSION_DELAY_MS,
+    GRID_SIZE_PRESETS
 } from '../constants';
 
 interface UseGameLogicReturn extends GameState {
     handleCellClick: (row: number, col: number) => void;
-    resetGame: (numPlayers: number) => void;
+    resetGame: (numPlayers: number, gridSize?: GridSize) => void;
     isAnimating: boolean;
 }
 
@@ -33,8 +35,40 @@ export const useGameLogic = (): UseGameLogicReturn => {
     const isAnimating = explosionQueue.length > 0;
 
     // Initialize game
-    const resetGame = useCallback((numPlayers: number) => {
-        const newGrid = createGrid(DEFAULT_ROWS, DEFAULT_COLS);
+    const resetGame = useCallback((numPlayers: number = 0, gridSize: GridSize = GridSize.SMALL) => {
+        // If numPlayers is 0, we are just resetting to setup screen, so grid doesn't matter much
+        // but if we are starting a game, we need dimensions.
+
+        let rows = DEFAULT_ROWS;
+        let cols = DEFAULT_COLS;
+
+        if (numPlayers > 0) {
+            if (gridSize === GridSize.SMALL) {
+                rows = GRID_SIZE_PRESETS.SMALL.rows;
+                cols = GRID_SIZE_PRESETS.SMALL.cols;
+            } else if (gridSize === GridSize.MEDIUM) {
+                rows = GRID_SIZE_PRESETS.MEDIUM.rows;
+                cols = GRID_SIZE_PRESETS.MEDIUM.cols;
+            } else if (gridSize === GridSize.LARGE) {
+                // Calculate based on window size
+                // Assuming cell size is approx 50px (from CSS) + gaps/padding
+                // This is a rough estimation. 
+                // Header is ~80px, padding ~40px.
+                const availableWidth = window.innerWidth - 40;
+                const availableHeight = window.innerHeight - 120; // Header + padding
+
+                const CELL_SIZE = 55; // 50px + gap estimate
+
+                cols = Math.floor(availableWidth / CELL_SIZE);
+                rows = Math.floor(availableHeight / CELL_SIZE);
+
+                // Enforce minimums (at least small)
+                rows = Math.max(rows, GRID_SIZE_PRESETS.SMALL.rows);
+                cols = Math.max(cols, GRID_SIZE_PRESETS.SMALL.cols);
+            }
+        }
+
+        const newGrid = createGrid(rows, cols);
         const newPlayers: Player[] = Array.from({ length: numPlayers }, (_, i) => ({
             id: `p${i + 1}`,
             name: `Player ${i + 1}`,
