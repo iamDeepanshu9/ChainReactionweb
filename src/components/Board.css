@@ -16,9 +16,7 @@
     box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
     max-width: 100%;
     max-height: 80vh;
-    /* Keep board within viewport */
-    aspect-ratio: 2/3;
-    /* Rough ratio for 6x9, adjusted by actual grid */
+    /* aspect-ratio removed to support dynamic grid sizes */
 }
 
 /* Responsiveness: Adjust cell sizes based on viewport */

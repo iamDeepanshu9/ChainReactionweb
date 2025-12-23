@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
 import { MAX_PLAYERS, MIN_PLAYERS, PLAYER_COLORS } from '../constants';
+import { GridSize } from '../types';
 import './PlayerSetup.css';
 
 interface PlayerSetupProps {
-    onStartGame: (numPlayers: number) => void;
+    onStartGame: (numPlayers: number, gridSize: GridSize) => void;
 }
 
 export const PlayerSetup: React.FC<PlayerSetupProps> = ({ onStartGame }) => {
     const [numPlayers, setNumPlayers] = useState<number>(2);
+    const [gridSize, setGridSize] = useState<GridSize>(GridSize.SMALL);
 
     const increment = () => {
         if (numPlayers < MAX_PLAYERS) setNumPlayers(prev => prev + 1);
@@ -19,13 +21,30 @@ export const PlayerSetup: React.FC<PlayerSetupProps> = ({ onStartGame }) => {
 
     return (
         <div className="setup-container">
-            <h1 className="setup-title">Chain Reaction</h1>
+            <h1 className="setup-title">Deep-Chain Reaction</h1>
 
             <div className="controls">
                 <label>Players:</label>
-                <button onClick={decrement} disabled={numPlayers <= MIN_PLAYERS}>-</button>
-                <span className="player-count-display">{numPlayers}</span>
-                <button onClick={increment} disabled={numPlayers >= MAX_PLAYERS}>+</button>
+                <div className="player-selector">
+                    <button onClick={decrement} disabled={numPlayers <= MIN_PLAYERS}>-</button>
+                    <span className="player-count-display">{numPlayers}</span>
+                    <button onClick={increment} disabled={numPlayers >= MAX_PLAYERS}>+</button>
+                </div>
+            </div>
+
+            <div className="controls">
+                <label>Grid Size:</label>
+                <div className="grid-selector">
+                    {(Object.keys(GridSize) as Array<keyof typeof GridSize>).map((sizeKey) => (
+                        <button
+                            key={sizeKey}
+                            className={`grid-btn ${gridSize === GridSize[sizeKey] ? 'active' : ''}`}
+                            onClick={() => setGridSize(GridSize[sizeKey])}
+                        >
+                            {sizeKey}
+                        </button>
+                    ))}
+                </div>
             </div>
 
             <div className="preview-orbs">
@@ -41,7 +60,7 @@ export const PlayerSetup: React.FC<PlayerSetupProps> = ({ onStartGame }) => {
                 ))}
             </div>
 
-            <button className="btn-start" onClick={() => onStartGame(numPlayers)}>
+            <button className="btn-start" onClick={() => onStartGame(numPlayers, gridSize)}>
                 Start Game
             </button>
         </div>

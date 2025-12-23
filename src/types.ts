@@ -18,6 +18,14 @@ export interface Cell {
 
 export type Grid = Cell[][];
 
+export const GridSize = {
+  SMALL: 'SMALL',
+  MEDIUM: 'MEDIUM',
+  LARGE: 'LARGE',
+} as const;
+
+export type GridSize = typeof GridSize[keyof typeof GridSize];
+
 export interface GameState {
   grid: Grid;
   players: Player[];
