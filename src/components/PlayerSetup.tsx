@@ -63,6 +63,7 @@ export const PlayerSetup: React.FC<PlayerSetupProps> = ({ onStartGame }) => {
             <button className="btn-start" onClick={() => onStartGame(numPlayers, gridSize)}>
                 Start Game
             </button>
+            <footer className="setup-footer">Created by Deepanshu Singh</footer>
         </div>
     );
 };
