@@ -17,7 +17,7 @@ import {
 
 interface UseGameLogicReturn extends GameState {
     handleCellClick: (row: number, col: number) => void;
-    resetGame: (numPlayers: number, gridSize?: GridSize) => void;
+    resetGame: (numPlayers: number, gridSize?: GridSize, playerNames?: string[]) => void;
     isAnimating: boolean;
 }
 
@@ -35,7 +35,7 @@ export const useGameLogic = (): UseGameLogicReturn => {
     const isAnimating = explosionQueue.length > 0;
 
     // Initialize game
-    const resetGame = useCallback((numPlayers: number = 0, gridSize: GridSize = GridSize.SMALL) => {
+    const resetGame = useCallback((numPlayers: number = 0, gridSize: GridSize = GridSize.SMALL, playerNames?: string[]) => {
         // If numPlayers is 0, we are just resetting to setup screen, so grid doesn't matter much
         // but if we are starting a game, we need dimensions.
 
@@ -71,7 +71,7 @@ export const useGameLogic = (): UseGameLogicReturn => {
         const newGrid = createGrid(rows, cols);
         const newPlayers: Player[] = Array.from({ length: numPlayers }, (_, i) => ({
             id: `p${i + 1}`,
-            name: `Player ${i + 1}`,
+            name: playerNames && playerNames[i] ? playerNames[i] : `Player ${i + 1}`,
             color: PLAYER_COLORS[i % PLAYER_COLORS.length],
             isAlive: true,
             order: i,
