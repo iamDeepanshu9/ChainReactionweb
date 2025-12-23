@@ -1,0 +1,86 @@
+.cell {
+  position: relative;
+  border: 1px solid #333;
+  background-color: #1a1a1a;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: background-color 0.2s;
+  overflow: hidden;
+}
+
+.cell:hover {
+  background-color: #252525;
+}
+
+.orb-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+}
+
+/* Orb visuals */
+.orb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  position: absolute;
+  box-shadow: 0 0 8px currentColor;
+}
+
+.orb::after {
+  content: '';
+  position: absolute;
+  top: 20%;
+  left: 20%;
+  width: 40%;
+  height: 40%;
+  background: white;
+  border-radius: 50%;
+  opacity: 0.5;
+}
+
+/* Animations */
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes jitter {
+  0% { transform: translate(0, 0) rotate(0deg); }
+  25% { transform: translate(-1px, 1px) rotate(5deg); }
+  50% { transform: translate(1px, -1px) rotate(-5deg); }
+  75% { transform: translate(-1px, -1px) rotate(5deg); }
+  100% { transform: translate(0, 0) rotate(0deg); }
+}
+
+.spinning {
+  animation: spin 3s linear infinite;
+}
+
+.unstable .orb-container {
+  animation: jitter 0.1s infinite;
+}
+
+/* Positioning based on count */
+.orb-1 {
+  /* Centered by flex parent */
+}
+
+/* Standard positions for rotating container */
+.orb.pos-0 { transform: translateY(-8px); }
+.orb.pos-1 { transform: translateY(8px); }
+
+/* Triangle */
+.orb.tri-0 { transform: translateY(-10px); }
+.orb.tri-1 { transform: translate(8px, 6px); }
+.orb.tri-2 { transform: translate(-8px, 6px); }
+
+/* In-waiting placement (optional feedback) */
+.cell.valid-move {
+  /* border-color: #555; */
+}
