@@ -42,11 +42,11 @@ export const GameContainer: React.FC = () => {
                 boxShadow: `0 0 20px ${currentPlayer?.color}40`
             }}>
                 <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>
-                    Chain Reaction
+                    Deep-Chain Reaction
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <span>Turn:</span>
+                    <span>Turn :</span>
                     <span style={{
                         color: currentPlayer?.color,
                         fontWeight: 'bold',
@@ -70,6 +70,44 @@ export const GameContainer: React.FC = () => {
                     Quit
                 </button>
             </header>
+            {/* Scorecard */}
+            <div style={{
+                display: 'flex',
+                justifyContent: 'center',
+                flexWrap: 'wrap',
+                gap: '1.5rem',
+                padding: '0.75rem',
+                backgroundColor: 'rgba(255, 255, 255, 0.02)',
+                borderBottom: '1px solid #222'
+            }}>
+                {players.map(player => {
+                    const cellCount = grid.reduce((acc, row) =>
+                        acc + row.filter(cell => cell.owner === player.id).length, 0
+                    );
+                    const isActive = currentPlayerId === player.id;
+                    return (
+                        <div key={player.id} style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem',
+                            opacity: isActive ? 1 : 0.5,
+                            transform: isActive ? 'scale(1.05)' : 'scale(1)',
+                            transition: 'all 0.3s ease'
+                        }}>
+                            <div style={{
+                                width: '12px',
+                                height: '12px',
+                                borderRadius: '50%',
+                                backgroundColor: player.color,
+                                boxShadow: isActive ? `0 0 12px ${player.color}` : `0 0 4px ${player.color}`
+                            }} />
+                            <span style={{ fontSize: '0.9rem', fontWeight: isActive ? 'bold' : 'normal' }}>
+                                {player.name}: {cellCount}
+                            </span>
+                        </div>
+                    );
+                })}
+            </div>
 
             {/* Main Board Area */}
             <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'relative' }}>
