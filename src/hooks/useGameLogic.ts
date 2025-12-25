@@ -136,6 +136,22 @@ export const useGameLogic = (): UseGameLogicReturn => {
             const { newGrid, nextUnstableCells } = explodeCells(grid, currentBatch);
             setGrid(newGrid);
 
+            // Check for winner immediately after this explosion step
+            if (turnCount >= players.length) {
+                const activeOwners = new Set<string>();
+                newGrid.forEach(row => row.forEach(cell => {
+                    if (cell.owner) activeOwners.add(cell.owner);
+                }));
+
+                if (activeOwners.size === 1) {
+                    const winnerId = Array.from(activeOwners)[0];
+                    setIsGameOver(true);
+                    setWinner(winnerId);
+                    setExplosionQueue([]); // Stop animation
+                    return; // Stop further processing
+                }
+            }
+
             if (nextUnstableCells.length > 0) {
                 setExplosionQueue([nextUnstableCells, ...remainingQueue]);
             } else {
