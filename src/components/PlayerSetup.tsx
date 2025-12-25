@@ -14,6 +14,21 @@ export const PlayerSetup: React.FC<PlayerSetupProps> = ({ onStartGame }) => {
     const [numPlayers, setNumPlayers] = useState<number>(2);
     const [gridSize, setGridSize] = useState<GridSize>(GridSize.SMALL);
     const [playerNames, setPlayerNames] = useState<string[]>([]);
+    const [isFullscreen, setIsFullscreen] = useState(false);
+
+    const toggleFullscreen = () => {
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen().then(() => {
+                setIsFullscreen(true);
+            }).catch(err => {
+                console.error(`Error attempting to enable fullscreen: ${err.message}`);
+            });
+        } else {
+            document.exitFullscreen().then(() => {
+                setIsFullscreen(false);
+            });
+        }
+    };
 
     const increment = () => {
         if (numPlayers < MAX_PLAYERS) setNumPlayers(prev => prev + 1);
@@ -149,6 +164,13 @@ export const PlayerSetup: React.FC<PlayerSetupProps> = ({ onStartGame }) => {
 
     return (
         <div className="setup-container">
+            <button
+                className="fullscreen-toggle"
+                onClick={toggleFullscreen}
+                title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
+            >
+                {isFullscreen ? "⛶" : "⛶"}
+            </button>
             <h1 className="setup-title">Deep-Chain Reaction</h1>
 
             {step === 'SETUP' && renderSetup()}
