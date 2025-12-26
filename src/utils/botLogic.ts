@@ -1,4 +1,4 @@
-import type { Grid, PlayerId, Cell } from '../types';
+import type { Grid, PlayerId } from '../types';
 import { Difficulty } from '../types';
 import { isValidMove, addOrbToCell, explodeCells } from './gameUtils';
 
