@@ -1,11 +1,28 @@
 export type PlayerId = string;
 
+export const PlayerType = {
+  HUMAN: 'HUMAN',
+  BOT: 'BOT'
+} as const;
+
+export type PlayerType = typeof PlayerType[keyof typeof PlayerType];
+
+export const Difficulty = {
+  EASY: 'EASY',
+  MEDIUM: 'MEDIUM',
+  HARD: 'HARD'
+} as const;
+
+export type Difficulty = typeof Difficulty[keyof typeof Difficulty];
+
 export interface Player {
   id: PlayerId;
   name: string;
   color: string;
   isAlive: boolean;
   order: number; // Turn order
+  type: PlayerType;
+  difficulty?: Difficulty;
 }
 
 export interface Cell {

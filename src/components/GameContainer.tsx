@@ -13,6 +13,7 @@ export const GameContainer: React.FC = () => {
         winner,
         handleCellClick,
         resetGame,
+        restartGame,
         isAnimating
     } = useGameLogic();
 
@@ -127,7 +128,7 @@ export const GameContainer: React.FC = () => {
                 <GameOver
                     winnerId={winner}
                     players={players}
-                    onRestart={() => resetGame(players.length)}
+                    onRestart={restartGame}
                 />
             )}
         </div>

@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { MAX_PLAYERS, MIN_PLAYERS, PLAYER_COLORS } from '../constants';
-import { GridSize } from '../types';
+import { GridSize, Difficulty } from '../types';
 import './PlayerSetup.css';
 
 interface PlayerSetupProps {
-    onStartGame: (numPlayers: number, gridSize: GridSize, playerNames?: string[]) => void;
+    onStartGame: (numPlayers: number, gridSize: GridSize, playerNames?: string[], isSinglePlayer?: boolean, difficulty?: Difficulty) => void;
 }
 
-type SetupStep = 'SETUP' | 'MODE_SELECT' | 'OFFLINE_CONFIG' | 'ONLINE_CONFIG';
+type SetupStep = 'SETUP' | 'MODE_SELECT' | 'OFFLINE_CONFIG' | 'ONLINE_CONFIG' | 'DIFFICULTY_SELECT';
 
 export const PlayerSetup: React.FC<PlayerSetupProps> = ({ onStartGame }) => {
     const [step, setStep] = useState<SetupStep>('SETUP');
@@ -15,6 +15,7 @@ export const PlayerSetup: React.FC<PlayerSetupProps> = ({ onStartGame }) => {
     const [gridSize, setGridSize] = useState<GridSize>(GridSize.SMALL);
     const [playerNames, setPlayerNames] = useState<string[]>([]);
     const [isFullscreen, setIsFullscreen] = useState(false);
+    const [difficulty, setDifficulty] = useState<Difficulty>(Difficulty.EASY);
 
     const toggleFullscreen = () => {
         if (!document.fullscreenElement) {
@@ -42,12 +43,16 @@ export const PlayerSetup: React.FC<PlayerSetupProps> = ({ onStartGame }) => {
         setStep('MODE_SELECT');
     };
 
-    const handleModeSelect = (mode: 'ONLINE' | 'OFFLINE') => {
+    const handleModeSelect = (mode: 'ONLINE' | 'OFFLINE' | 'SINGLE_PLAYER') => {
         if (mode === 'OFFLINE') {
-            // Initialize empty names or default names
             const initialNames = Array.from({ length: numPlayers }, (_, i) => `Player ${i + 1}`);
             setPlayerNames(initialNames);
             setStep('OFFLINE_CONFIG');
+        } else if (mode === 'SINGLE_PLAYER') {
+            setNumPlayers(2); // Single player is always 2 players (User vs Bot)
+            // Default names
+            setPlayerNames(["Player 1 (You)", "Bot"]);
+            setStep('DIFFICULTY_SELECT');
         } else {
             setStep('ONLINE_CONFIG');
         }
@@ -59,8 +64,12 @@ export const PlayerSetup: React.FC<PlayerSetupProps> = ({ onStartGame }) => {
         setPlayerNames(newNames);
     };
 
-    const handleFinalStart = () => {
-        onStartGame(numPlayers, gridSize, playerNames);
+    const handleFinalStart = (mode: 'OFFLINE' | 'SINGLE_PLAYER') => {
+        if (mode === 'SINGLE_PLAYER') {
+            onStartGame(2, gridSize, playerNames, true, difficulty);
+        } else {
+            onStartGame(numPlayers, gridSize, playerNames, false);
+        }
     };
 
     const renderSetup = () => (
@@ -112,14 +121,39 @@ export const PlayerSetup: React.FC<PlayerSetupProps> = ({ onStartGame }) => {
         <div className="mode-select-container">
             <h2>Select Game Mode</h2>
             <div className="mode-buttons">
+                <button className="mode-btn" onClick={() => handleModeSelect('SINGLE_PLAYER')}>
+                    Single Player (vs Bot)
+                </button>
                 <button className="mode-btn" onClick={() => handleModeSelect('OFFLINE')}>
-                    Offline (Local)
+                    Offline (Local Multiplayer)
                 </button>
                 <button className="mode-btn" onClick={() => handleModeSelect('ONLINE')}>
                     Online (Multiplayer)
                 </button>
             </div>
             <button className="btn-back" onClick={() => setStep('SETUP')}>Back</button>
+        </div>
+    );
+
+    const renderDifficultySelect = () => (
+        <div className="difficulty-select-container">
+            <h2>Select Difficulty</h2>
+            <div className="difficulty-buttons">
+                {(Object.keys(Difficulty) as Array<keyof typeof Difficulty>).map((diffKey) => (
+                    <button
+                        key={diffKey}
+                        className={`mode-btn ${difficulty === Difficulty[diffKey] ? 'active-diff' : ''}`}
+                        onClick={() => setDifficulty(Difficulty[diffKey])}
+                        style={{ backgroundColor: difficulty === Difficulty[diffKey] ? '#4CAF50' : '' }}
+                    >
+                        {diffKey}
+                    </button>
+                ))}
+            </div>
+            <div className="action-buttons">
+                <button className="btn-back" onClick={() => setStep('MODE_SELECT')}>Back</button>
+                <button className="btn-start" onClick={() => handleFinalStart('SINGLE_PLAYER')}>Play vs Bot</button>
+            </div>
         </div>
     );
 
@@ -145,7 +179,7 @@ export const PlayerSetup: React.FC<PlayerSetupProps> = ({ onStartGame }) => {
             </div>
             <div className="action-buttons">
                 <button className="btn-back" onClick={() => setStep('MODE_SELECT')}>Back</button>
-                <button className="btn-start" onClick={handleFinalStart}>Play</button>
+                <button className="btn-start" onClick={() => handleFinalStart('OFFLINE')}>Play</button>
             </div>
         </div>
     );
@@ -175,6 +209,7 @@ export const PlayerSetup: React.FC<PlayerSetupProps> = ({ onStartGame }) => {
 
             {step === 'SETUP' && renderSetup()}
             {step === 'MODE_SELECT' && renderModeSelect()}
+            {step === 'DIFFICULTY_SELECT' && renderDifficultySelect()}
             {step === 'OFFLINE_CONFIG' && renderOfflineConfig()}
             {step === 'ONLINE_CONFIG' && renderOnlineConfig()}
 

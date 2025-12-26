@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { GridSize } from '../types';
+import { GridSize, PlayerType, Difficulty } from '../types';
 import type { Grid, Player, PlayerId, GameState } from '../types';
 import {
     createGrid,
@@ -7,6 +7,7 @@ import {
     addOrbToCell,
     explodeCells
 } from '../utils/gameUtils';
+import { getBotMove } from '../utils/botLogic';
 import {
     DEFAULT_ROWS,
     DEFAULT_COLS,
@@ -17,7 +18,8 @@ import {
 
 interface UseGameLogicReturn extends GameState {
     handleCellClick: (row: number, col: number) => void;
-    resetGame: (numPlayers: number, gridSize?: GridSize, playerNames?: string[]) => void;
+    resetGame: (numPlayers: number, gridSize?: GridSize, playerNames?: string[], isSinglePlayer?: boolean, difficulty?: Difficulty) => void;
+    restartGame: () => void;
     isAnimating: boolean;
 }
 
@@ -29,15 +31,32 @@ export const useGameLogic = (): UseGameLogicReturn => {
     const [isGameOver, setIsGameOver] = useState<boolean>(false);
     const [winner, setWinner] = useState<PlayerId | null>(null);
 
+    // Game Config State (for restarts)
+    const [gameConfig, setGameConfig] = useState<{
+        isSinglePlayer: boolean;
+        difficulty: Difficulty;
+        gridSize: GridSize;
+    }>({ isSinglePlayer: false, difficulty: Difficulty.EASY, gridSize: GridSize.SMALL });
+
     // Queue of unstable cells to process sequentially (for animation)
     const [explosionQueue, setExplosionQueue] = useState<{ row: number, col: number }[][]>([]);
 
     const isAnimating = explosionQueue.length > 0;
 
     // Initialize game
-    const resetGame = useCallback((numPlayers: number = 0, gridSize: GridSize = GridSize.SMALL, playerNames?: string[]) => {
-        // If numPlayers is 0, we are just resetting to setup screen, so grid doesn't matter much
-        // but if we are starting a game, we need dimensions.
+    const resetGame = useCallback((
+        numPlayers: number = 0,
+        gridSize: GridSize = GridSize.SMALL,
+        playerNames?: string[],
+        isSinglePlayer: boolean = false,
+        difficulty: Difficulty = Difficulty.EASY
+    ) => {
+        // If numPlayers is 0, we are just resetting to setup screen
+
+        // Save config
+        if (numPlayers > 0) {
+            setGameConfig({ isSinglePlayer, difficulty, gridSize });
+        }
 
         let rows = DEFAULT_ROWS;
         let cols = DEFAULT_COLS;
@@ -51,9 +70,6 @@ export const useGameLogic = (): UseGameLogicReturn => {
                 cols = GRID_SIZE_PRESETS.MEDIUM.cols;
             } else if (gridSize === GridSize.LARGE) {
                 // Calculate based on window size
-                // Assuming cell size is approx 50px (from CSS) + gaps/padding
-                // This is a rough estimation. 
-                // Header is ~80px, padding ~40px.
                 const availableWidth = window.innerWidth - 140;
                 const availableHeight = window.innerHeight - 220; // Header + padding
 
@@ -69,13 +85,18 @@ export const useGameLogic = (): UseGameLogicReturn => {
         }
 
         const newGrid = createGrid(rows, cols);
-        const newPlayers: Player[] = Array.from({ length: numPlayers }, (_, i) => ({
-            id: `p${i + 1}`,
-            name: playerNames && playerNames[i] ? playerNames[i] : `Player ${i + 1}`,
-            color: PLAYER_COLORS[i % PLAYER_COLORS.length],
-            isAlive: true,
-            order: i,
-        }));
+        const newPlayers: Player[] = Array.from({ length: numPlayers }, (_, i) => {
+            const isBot = isSinglePlayer && i === 1; // Player 2 is Bot in Single Player
+            return {
+                id: `p${i + 1}`,
+                name: playerNames && playerNames[i] ? playerNames[i] : `Player ${i + 1}`,
+                color: PLAYER_COLORS[i % PLAYER_COLORS.length],
+                isAlive: true,
+                order: i,
+                type: isBot ? PlayerType.BOT : PlayerType.HUMAN,
+                difficulty: isBot ? difficulty : undefined
+            };
+        });
 
         setGrid(newGrid);
         setPlayers(newPlayers);
@@ -85,6 +106,18 @@ export const useGameLogic = (): UseGameLogicReturn => {
         setWinner(null);
         setExplosionQueue([]);
     }, []);
+
+    const restartGame = useCallback(() => {
+        const currentNames = players.map(p => p.name);
+
+        resetGame(
+            players.length,
+            gameConfig.gridSize,
+            currentNames,
+            gameConfig.isSinglePlayer,
+            gameConfig.difficulty
+        );
+    }, [players, gameConfig, resetGame]);
 
     // Handle Turn Switch
     const advanceTurn = useCallback((currentGrid: Grid, currentPlayers: Player[]) => {
@@ -164,12 +197,10 @@ export const useGameLogic = (): UseGameLogicReturn => {
         }, EXPLOSION_DELAY_MS);
 
         return () => clearTimeout(timeoutId);
-    }, [explosionQueue, grid, players, advanceTurn]);
+    }, [explosionQueue, grid, players, advanceTurn, turnCount]);
 
-
-    const handleCellClick = (row: number, col: number) => {
-        if (isGameOver || isAnimating || players.length === 0) return;
-
+    // Core Move Logic
+    const makeMove = useCallback((row: number, col: number) => {
         const currentPlayer = players[currentPlayerIdx];
         const cell = grid[row][col];
 
@@ -183,6 +214,39 @@ export const useGameLogic = (): UseGameLogicReturn => {
         } else {
             advanceTurn(newGrid, players);
         }
+    }, [grid, players, currentPlayerIdx, advanceTurn]);
+
+    // Bot Logic Effect
+    useEffect(() => {
+        if (isGameOver || players.length === 0) return;
+
+        const currentPlayer = players[currentPlayerIdx];
+        if (currentPlayer && currentPlayer.type === PlayerType.BOT && !isAnimating && explosionQueue.length === 0) {
+            // It's Bot's turn
+            const timer = setTimeout(() => {
+                const move = getBotMove(grid, currentPlayer.id, currentPlayer.difficulty || Difficulty.EASY);
+                if (move) {
+                    makeMove(move.row, move.col);
+                } else {
+                    // Start thinking about resignation logic or stuck?
+                    // Usually this shouldn't happen unless board is broken.
+                    console.warn("Bot found no moves!");
+                }
+            }, 800); // Thinking delay
+
+            return () => clearTimeout(timer);
+        }
+    }, [currentPlayerIdx, players, grid, isGameOver, isAnimating, explosionQueue, makeMove]);
+
+    // Human Interaction
+    const handleCellClick = (row: number, col: number) => {
+        if (isGameOver || isAnimating || players.length === 0) return;
+
+        const currentPlayer = players[currentPlayerIdx];
+        // Only allow click if it's Human turn
+        if (currentPlayer.type !== PlayerType.HUMAN) return;
+
+        makeMove(row, col);
     };
 
     return {
@@ -194,6 +258,7 @@ export const useGameLogic = (): UseGameLogicReturn => {
         turnCount,
         handleCellClick,
         resetGame,
+        restartGame,
         isAnimating
     };
 };
