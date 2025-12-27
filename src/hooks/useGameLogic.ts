@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { GridSize, PlayerType, Difficulty } from '../types';
-import type { Grid, Player, PlayerId, GameState } from '../types';
+import type { Grid, Player, PlayerId, GameState, MultiplayerConfig } from '../types';
 import {
     createGrid,
     isValidMove,
@@ -18,9 +18,12 @@ import {
 
 interface UseGameLogicReturn extends GameState {
     handleCellClick: (row: number, col: number) => void;
-    resetGame: (numPlayers: number, gridSize?: GridSize, playerNames?: string[], isSinglePlayer?: boolean, difficulty?: Difficulty) => void;
+    resetGame: (numPlayers: number, gridSize?: GridSize, playerNames?: string[], isSinglePlayer?: boolean, difficulty?: Difficulty, multiplayerConfig?: MultiplayerConfig) => void;
     restartGame: () => void;
     isAnimating: boolean;
+    injectGameState: (gameState: GameState) => void;
+    multiplayerConfig: MultiplayerConfig | undefined;
+    updatePlayers: (players: Player[]) => void;
 }
 
 export const useGameLogic = (): UseGameLogicReturn => {
@@ -31,12 +34,55 @@ export const useGameLogic = (): UseGameLogicReturn => {
     const [isGameOver, setIsGameOver] = useState<boolean>(false);
     const [winner, setWinner] = useState<PlayerId | null>(null);
 
+
     // Game Config State (for restarts)
     const [gameConfig, setGameConfig] = useState<{
         isSinglePlayer: boolean;
         difficulty: Difficulty;
         gridSize: GridSize;
+        multiplayerConfig?: MultiplayerConfig;
     }>({ isSinglePlayer: false, difficulty: Difficulty.EASY, gridSize: GridSize.SMALL });
+
+    // Persistence Logic (Host & Single Player) - Moved here to access gameConfig
+    // Load state from localStorage on mount
+    useEffect(() => {
+        const saved = localStorage.getItem('chain_reaction_game_state');
+        if (saved) {
+            try {
+                const parsed = JSON.parse(saved);
+                if (parsed.grid && parsed.players && parsed.players.length > 0) {
+                    console.log("Restoring game state from localStorage");
+                    setGrid(parsed.grid);
+                    setPlayers(parsed.players);
+                    setCurrentPlayerIdx(parsed.players.findIndex((p: Player) => p.id === parsed.currentPlayerId));
+                    setTurnCount(parsed.turnCount || 0);
+                    setIsGameOver(parsed.isGameOver || false);
+                    setWinner(parsed.winner || null);
+                    if (parsed.multiplayerConfig) {
+                        setGameConfig(prev => ({ ...prev, multiplayerConfig: parsed.multiplayerConfig }));
+                    }
+                }
+            } catch (e) {
+                console.error("Failed to load saved state", e);
+            }
+        }
+    }, []);
+
+    // Save state on change
+    useEffect(() => {
+        if (players.length > 0) {
+            const stateToSave = {
+                grid,
+                players,
+                currentPlayerId: players[currentPlayerIdx]?.id,
+                isGameOver,
+                winner,
+                turnCount,
+                multiplayerConfig: gameConfig.multiplayerConfig
+            };
+            localStorage.setItem('chain_reaction_game_state', JSON.stringify(stateToSave));
+        }
+    }, [grid, players, currentPlayerIdx, isGameOver, winner, turnCount, gameConfig]);
 
     // Queue of unstable cells to process sequentially (for animation)
     const [explosionQueue, setExplosionQueue] = useState<{ row: number, col: number }[][]>([]);
@@ -49,13 +95,14 @@ export const useGameLogic = (): UseGameLogicReturn => {
         gridSize: GridSize = GridSize.SMALL,
         playerNames?: string[],
         isSinglePlayer: boolean = false,
-        difficulty: Difficulty = Difficulty.EASY
+        difficulty: Difficulty = Difficulty.EASY,
+        multiplayerConfig?: MultiplayerConfig
     ) => {
         // If numPlayers is 0, we are just resetting to setup screen
 
         // Save config
         if (numPlayers > 0) {
-            setGameConfig({ isSinglePlayer, difficulty, gridSize });
+            setGameConfig({ isSinglePlayer, difficulty, gridSize, multiplayerConfig });
         }
 
         let rows = DEFAULT_ROWS;
@@ -105,6 +152,13 @@ export const useGameLogic = (): UseGameLogicReturn => {
         setIsGameOver(false);
         setWinner(null);
         setExplosionQueue([]);
+
+        // Clear saved state if we are resetting to 0 players (Setup screen)
+        if (numPlayers === 0) {
+            localStorage.removeItem('chain_reaction_game_state');
+            // Also disconnect socket if leaving online mode?
+            // Optional but good for cleanup.
+        }
     }, []);
 
     const restartGame = useCallback(() => {
@@ -115,7 +169,8 @@ export const useGameLogic = (): UseGameLogicReturn => {
             gameConfig.gridSize,
             currentNames,
             gameConfig.isSinglePlayer,
-            gameConfig.difficulty
+            gameConfig.difficulty,
+            gameConfig.multiplayerConfig
         );
     }, [players, gameConfig, resetGame]);
 
@@ -249,6 +304,15 @@ export const useGameLogic = (): UseGameLogicReturn => {
         makeMove(row, col);
     };
 
+    const injectGameState = useCallback((gameState: GameState) => {
+        setGrid(gameState.grid);
+        setPlayers(gameState.players);
+        setCurrentPlayerIdx(gameState.players.findIndex(p => p.id === gameState.currentPlayerId) !== -1 ? gameState.players.findIndex(p => p.id === gameState.currentPlayerId) : 0);
+        setTurnCount(gameState.turnCount);
+        setIsGameOver(gameState.isGameOver);
+        setWinner(gameState.winner);
+    }, []);
+
     return {
         grid,
         players,
@@ -259,6 +323,9 @@ export const useGameLogic = (): UseGameLogicReturn => {
         handleCellClick,
         resetGame,
         restartGame,
-        isAnimating
+        isAnimating,
+        injectGameState,
+        multiplayerConfig: gameConfig.multiplayerConfig,
+        updatePlayers: setPlayers
     };
 };
