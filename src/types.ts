@@ -43,6 +43,16 @@ export const GridSize = {
 
 export type GridSize = typeof GridSize[keyof typeof GridSize];
 
+export type MultiplayerMode = 'HOST' | 'GUEST' | 'OFFLINE';
+
+export interface MultiplayerConfig {
+  mode: MultiplayerMode;
+  roomId?: string;
+  isHost: boolean;
+  username?: string;
+  playerId?: string; // Local player's ID (socket.id)
+}
+
 export interface GameState {
   grid: Grid;
   players: Player[];
